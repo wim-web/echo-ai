@@ -42,6 +42,18 @@ function main(): void {
   worker.startLoop();
 
   const skill = SkillBuilders.custom()
+    .addRequestInterceptors((handlerInput) => {
+      const envelope = handlerInput.requestEnvelope;
+      const request = envelope.request;
+      logger.info(
+        {
+          requestType: request.type,
+          intentName: request.type === "IntentRequest" ? request.intent.name : undefined,
+          requestId: request.requestId,
+        },
+        "alexa request received",
+      );
+    })
     .addRequestHandlers(
       ...buildHandlers({
         repo,
@@ -52,6 +64,19 @@ function main(): void {
         },
       }),
     )
+    .addErrorHandlers({
+      canHandle: () => true,
+      handle: (handlerInput, error) => {
+        logger.error(
+          { err: error.message, stack: error.stack },
+          "skill error",
+        );
+        return handlerInput.responseBuilder
+          .speak("すみません、エラーが発生しました。")
+          .withShouldEndSession(true)
+          .getResponse();
+      },
+    })
     .create();
 
   // 署名検証・タイムスタンプ検証を有効化
