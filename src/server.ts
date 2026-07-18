@@ -46,6 +46,7 @@ function main(): void {
       ...buildHandlers({
         repo,
         skillId: config.alexaSkillId,
+        logger,
         onJobAccepted: () => {
           void worker.processNext();
         },

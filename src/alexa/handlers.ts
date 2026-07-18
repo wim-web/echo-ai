@@ -9,6 +9,9 @@ export interface AlexaDeps {
   repo: JobRepository;
   skillId: string;
   onJobAccepted?: (jobId: string) => void;
+  logger?: {
+    info(obj: Record<string, unknown>, msg: string): void;
+  };
 }
 
 function hashUserId(userId: string): string {
@@ -46,6 +49,10 @@ export function buildHandlers(deps: AlexaDeps): RequestHandler[] {
     canHandle: (handlerInput) => verify(handlerInput) && isIntent(handlerInput, INTENTS.askHermes),
     handle: (handlerInput) => {
       verifySkillId(handlerInput, deps.skillId);
+      deps.logger?.info(
+        { requestId: handlerInput.requestEnvelope.request.requestId },
+        "AskHermesIntent received",
+      );
       const query = getSlotValue(handlerInput.requestEnvelope, "query")?.trim();
       if (!query) {
         return handlerInput.responseBuilder
@@ -99,12 +106,17 @@ export function buildHandlers(deps: AlexaDeps): RequestHandler[] {
 
   const fallbackHandler: RequestHandler = {
     canHandle: (handlerInput) => verify(handlerInput) && isIntent(handlerInput, INTENTS.fallback),
-    handle: (handlerInput) =>
-      handlerInput.responseBuilder
+    handle: (handlerInput) => {
+      deps.logger?.info(
+        { requestId: handlerInput.requestEnvelope.request.requestId },
+        "FallbackIntent received",
+      );
+      return handlerInput.responseBuilder
         .speak(SPEECH.fallback)
         .reprompt(SPEECH.fallback)
         .withShouldEndSession(false)
-        .getResponse(),
+        .getResponse();
+    },
   };
 
   return [launchHandler, askHermesHandler, helpHandler, stopCancelHandler, fallbackHandler];
