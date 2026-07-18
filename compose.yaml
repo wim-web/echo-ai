@@ -7,3 +7,13 @@ services:
     env_file: .env
     volumes:
       - ./data:/app/data
+
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    network_mode: host # 8123で待受 + Echo等のディスカバリ用
+    environment:
+      - TZ=Asia/Tokyo
+    volumes:
+      - ./homeassistant:/config
