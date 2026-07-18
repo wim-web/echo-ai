@@ -15,12 +15,17 @@ const noopLogger: WorkerLogger = {
   error: () => {},
 };
 
+export interface DeviceResolver {
+  resolve(alexaDeviceId: string): string | undefined;
+}
+
 export interface WorkerDeps {
   repo: JobRepository;
   hermes: HermesClient;
   ha: HomeAssistantClient;
   defaultEntityId: string;
   instructions: string;
+  deviceRepo?: DeviceResolver;
   pollIntervalMs?: number;
   runTimeoutMs?: number;
   logger?: WorkerLogger;
@@ -39,6 +44,7 @@ export class Worker {
   private readonly hermes: HermesClient;
   private readonly ha: HomeAssistantClient;
   private readonly defaultEntityId: string;
+  private readonly deviceRepo?: DeviceResolver;
   private readonly instructions: string;
   private readonly pollIntervalMs: number;
   private readonly runTimeoutMs: number;
@@ -51,6 +57,7 @@ export class Worker {
     this.hermes = deps.hermes;
     this.ha = deps.ha;
     this.defaultEntityId = deps.defaultEntityId;
+    this.deviceRepo = deps.deviceRepo;
     this.instructions = deps.instructions;
     this.pollIntervalMs = deps.pollIntervalMs ?? 2000;
     this.runTimeoutMs = deps.runTimeoutMs ?? 10 * 60 * 1000;
@@ -132,12 +139,25 @@ export class Worker {
     }
   }
 
+  private resolveEntityId(job: Job): string | undefined {
+    return this.deviceRepo?.resolve(job.alexaDeviceId) ?? (this.defaultEntityId || undefined);
+  }
+
   private async notify(job: Job): Promise<void> {
     const current = this.repo.findById(job.id);
     if (!current?.answer) return;
+    const entityId = this.resolveEntityId(job);
+    if (!entityId) {
+      // 未登録端末: COMPLETEDのまま保持し、deviceId末尾をログへ（対応付けはconfig/devices.yaml）
+      this.logger.warn(
+        { jobId: job.id, deviceIdTail: job.alexaDeviceId.slice(-8) },
+        "no entity mapping for device; staying COMPLETED",
+      );
+      return;
+    }
     const speech = formatForSpeech(current.answer);
     try {
-      await this.ha.announce(this.defaultEntityId, speech);
+      await this.ha.announce(entityId, speech);
       this.repo.markNotified(job.id);
       this.logger.info({ jobId: job.id }, "notified via home assistant");
     } catch (err) {

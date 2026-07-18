@@ -7,6 +7,7 @@ export interface Config {
   homeAssistantToken: string;
   haDefaultEntityId: string;
   databasePath: string;
+  devicesConfigPath: string;
   hermesInstructions: string;
 }
 
@@ -34,8 +35,9 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     hermesApiKey: required(env, "HERMES_API_KEY"),
     homeAssistantUrl: required(env, "HOME_ASSISTANT_URL"),
     homeAssistantToken: required(env, "HOME_ASSISTANT_TOKEN"),
-    haDefaultEntityId: required(env, "HA_DEFAULT_ENTITY_ID"),
+    haDefaultEntityId: env.HA_DEFAULT_ENTITY_ID ?? "", // 端末対応表に無い場合のフォールバック先。空なら通知しない
     databasePath: env.DATABASE_PATH ?? "./data/bridge.sqlite",
+    devicesConfigPath: env.DEVICES_CONFIG_PATH ?? "./config/devices.yaml",
     hermesInstructions: env.HERMES_INSTRUCTIONS ?? DEFAULT_HERMES_INSTRUCTIONS,
   };
 }

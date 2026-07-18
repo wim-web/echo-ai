@@ -3,7 +3,7 @@
     {
       "name": "deploy-alexa-hermes-bridge",
       "host": "oracle-zoff",
-      "script_path": "./deploy/deploy.sh",
+      "script_path": "./deploy.sh",
       "working_dir": "/home/ubuntu",
       "sudo": false,
       "timeout_sec": 600,

@@ -1,0 +1,7 @@
+# Alexa deviceId → Home Assistant entity_id の対応表
+# deviceId はブリッジのログ（未登録警告または受信時）で確認できる
+devices:
+  amzn1.ask.device.EXAMPLE123:
+    entity_id: media_player.living_room_echo
+  # amzn1.ask.device.EXAMPLE456:
+  #   entity_id: media_player.bedroom_echo

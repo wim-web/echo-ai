@@ -134,4 +134,40 @@ describe("Worker", () => {
       "結論 太字の回答。",
     );
   });
+
+  it("announces to the entity mapped from the requesting device id", async () => {
+    const deps = makeDeps({
+      deviceRepo: { resolve: (id: string) => (id === "device-1" ? "media_player.bedroom_echo" : undefined) },
+    });
+    const worker = new Worker(deps);
+    deps.repo.create({ alexaRequestId: "r", alexaUserIdHash: "h", alexaDeviceId: "device-1", query: "q" });
+
+    await worker.processNext();
+
+    expect(deps.ha.announce).toHaveBeenCalledWith("media_player.bedroom_echo", "今日は晴れです。");
+  });
+
+  it("falls back to the default entity for unmapped devices", async () => {
+    const deps = makeDeps({ deviceRepo: { resolve: () => undefined } });
+    const worker = new Worker(deps);
+    deps.repo.create({ alexaRequestId: "r", alexaUserIdHash: "h", alexaDeviceId: "unknown-device", query: "q" });
+
+    await worker.processNext();
+
+    expect(deps.ha.announce).toHaveBeenCalledWith("media_player.living_room_echo", "今日は晴れです。");
+  });
+
+  it("keeps the job COMPLETED and logs the unregistered device id when no target exists", async () => {
+    const deps = makeDeps({
+      deviceRepo: { resolve: () => undefined },
+      defaultEntityId: "",
+    });
+    const worker = new Worker(deps);
+    const job = deps.repo.create({ alexaRequestId: "r", alexaUserIdHash: "h", alexaDeviceId: "unknown-device", query: "q" });
+
+    await worker.processNext();
+
+    expect(deps.repo.findById(job.id)?.status).toBe("COMPLETED");
+    expect(deps.ha.announce).not.toHaveBeenCalled();
+  });
 });

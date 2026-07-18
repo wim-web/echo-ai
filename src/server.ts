@@ -6,6 +6,7 @@ import { ExpressAdapter } from "ask-sdk-express-adapter";
 import express from "express";
 import { buildHandlers } from "./alexa/handlers.js";
 import { loadConfig } from "./config.js";
+import { DeviceRepository } from "./devices/repository.js";
 import { HermesClient } from "./hermes/client.js";
 import { HomeAssistantClient } from "./home-assistant/client.js";
 import { JobRepository } from "./jobs/repository.js";
@@ -17,6 +18,8 @@ function main(): void {
 
   fs.mkdirSync(path.dirname(config.databasePath), { recursive: true });
   const repo = new JobRepository(config.databasePath);
+  const deviceRepo = new DeviceRepository(config.devicesConfigPath);
+  logger.info({ devices: deviceRepo.deviceIds().length }, "device mappings loaded");
 
   const hermes = new HermesClient({
     baseUrl: config.hermesApiUrl,
@@ -33,6 +36,7 @@ function main(): void {
     ha,
     defaultEntityId: config.haDefaultEntityId,
     instructions: config.hermesInstructions,
+    deviceRepo,
     logger,
   });
   worker.startLoop();
