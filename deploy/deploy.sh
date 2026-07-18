@@ -3,7 +3,7 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-$HOME/alexa-hermes-bridge}"
-REPO_URL="${REPO_URL:-git@github.com:wim-web/echo-ai.git}"
+REPO_URL="${REPO_URL:-https://github.com/wim-web/echo-ai.git}"
 BRANCH="${BRANCH:-main}"
 
 if [ -d "$APP_DIR/.git" ]; then
