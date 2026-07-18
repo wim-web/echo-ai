@@ -1,0 +1,9 @@
+services:
+  bridge:
+    build: .
+    container_name: alexa-hermes-bridge
+    restart: unless-stopped
+    network_mode: host # ホストのHermes API (127.0.0.1:8643) とcloudflared (127.0.0.1:3000) へそのまま到達させる
+    env_file: .env
+    volumes:
+      - ./data:/app/data

@@ -1,0 +1,13 @@
+{
+  "tasks": [
+    {
+      "name": "deploy-alexa-hermes-bridge",
+      "host": "oracle-zoff",
+      "script_path": "./deploy/deploy.sh",
+      "working_dir": "/home/ubuntu",
+      "sudo": false,
+      "timeout_sec": 600,
+      "environments": {}
+    }
+  ]
+}
