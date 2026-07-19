@@ -175,20 +175,22 @@ describe("Alexa handlers", () => {
   it("responds to LaunchRequest with usage guidance", () => {
     const deps = makeDeps();
     const handlers = buildHandlers(deps);
-    const {
-      handlerInput,
-      speak,
-      reprompt,
-      withShouldEndSession,
-      addElicitSlotDirective,
-    } = makeHandlerInput(launchEnvelope());
+    const { handlerInput, speak, withShouldEndSession, addElicitSlotDirective } = makeHandlerInput(launchEnvelope());
 
     findHandler(handlers, handlerInput).handle(handlerInput as never);
 
     expect(speak).toHaveBeenCalledWith(expect.stringContaining("ヘルメス"));
-    expect(reprompt).toHaveBeenCalledWith(expect.stringContaining("ヘルメス"));
     expect(withShouldEndSession).toHaveBeenCalledWith(false);
-    expect(addElicitSlotDirective).not.toHaveBeenCalled();
+    expect(addElicitSlotDirective).toHaveBeenCalledWith("query", {
+      name: "AskHermesIntent",
+      confirmationStatus: "NONE",
+      slots: {
+        query: {
+          name: "query",
+          confirmationStatus: "NONE",
+        },
+      },
+    });
   });
 
   it("responds to HelpIntent", () => {
