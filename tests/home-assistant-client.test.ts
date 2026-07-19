@@ -37,6 +37,49 @@ describe("HomeAssistantClient", () => {
     await expect(client.announce("media_player.x", "msg")).rejects.toThrow(HomeAssistantError);
   });
 
+  it("returns the most recently updated available media player marked as last called", async () => {
+    const fetchFn = vi.fn().mockResolvedValue(jsonResponse(200, [
+      {
+        entity_id: "media_player.old_echo",
+        state: "idle",
+        last_updated: "2026-07-19T00:00:00Z",
+        attributes: { last_called: true },
+      },
+      {
+        entity_id: "media_player.unavailable_echo",
+        state: "unavailable",
+        last_updated: "2026-07-19T00:02:00Z",
+        attributes: { last_called: true },
+      },
+      {
+        entity_id: "media_player.requesting_echo",
+        state: "idle",
+        last_updated: "2026-07-19T00:01:00Z",
+        attributes: { last_called: true },
+      },
+      {
+        entity_id: "switch.requesting_echo_do_not_disturb",
+        state: "off",
+        last_updated: "2026-07-19T00:03:00Z",
+        attributes: { last_called: true },
+      },
+    ]));
+    const client = new HomeAssistantClient({
+      baseUrl: "http://127.0.0.1:8123",
+      token: "ha-token",
+      fetchFn,
+    });
+
+    await expect(client.lastCalledMediaPlayer()).resolves.toBe("media_player.requesting_echo");
+    expect(fetchFn).toHaveBeenCalledWith(
+      "http://127.0.0.1:8123/api/states",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer ha-token" }),
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
   it("health returns true when /api/ responds", async () => {
     const fetchFn = vi.fn().mockResolvedValue(jsonResponse(200, { message: "API running." }));
     const client = new HomeAssistantClient({ baseUrl: "http://127.0.0.1:8123", token: "t", fetchFn });

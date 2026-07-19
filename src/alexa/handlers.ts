@@ -8,9 +8,11 @@ import { SPEECH } from "./response.js";
 export interface AlexaDeps {
   repo: JobRepository;
   skillId: string;
+  resolveLastCalledEntity?: () => Promise<string | undefined>;
   onJobAccepted?: (jobId: string) => void;
   logger?: {
     info(obj: Record<string, unknown>, msg: string): void;
+    warn?(obj: Record<string, unknown>, msg: string): void;
   };
 }
 
@@ -47,7 +49,7 @@ export function buildHandlers(deps: AlexaDeps): RequestHandler[] {
 
   const askHermesHandler: RequestHandler = {
     canHandle: (handlerInput) => verify(handlerInput) && isIntent(handlerInput, INTENTS.askHermes),
-    handle: (handlerInput) => {
+    handle: async (handlerInput) => {
       verifySkillId(handlerInput, deps.skillId);
       deps.logger?.info(
         { requestId: handlerInput.requestEnvelope.request.requestId },
@@ -65,11 +67,26 @@ export function buildHandlers(deps: AlexaDeps): RequestHandler[] {
       const { context, request } = handlerInput.requestEnvelope;
       const userId = context.System.user.userId;
       const deviceId = context.System.device?.deviceId ?? "unknown";
+      let targetEntityId: string | undefined;
+      if (deps.resolveLastCalledEntity) {
+        try {
+          targetEntityId = await deps.resolveLastCalledEntity();
+        } catch (err) {
+          deps.logger?.warn?.(
+            {
+              requestId: request.requestId,
+              err: err instanceof Error ? err.message : String(err),
+            },
+            "failed to resolve last-called Home Assistant entity",
+          );
+        }
+      }
 
       const job = deps.repo.create({
         alexaRequestId: request.requestId,
         alexaUserIdHash: hashUserId(userId),
         alexaDeviceId: deviceId,
+        targetEntityId,
         query,
       });
       if (job.created) {

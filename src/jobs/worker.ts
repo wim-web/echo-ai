@@ -140,7 +140,9 @@ export class Worker {
   }
 
   private resolveEntityId(job: Job): string | undefined {
-    return this.deviceRepo?.resolve(job.alexaDeviceId) ?? (this.defaultEntityId || undefined);
+    return job.targetEntityId
+      ?? this.deviceRepo?.resolve(job.alexaDeviceId)
+      ?? (this.defaultEntityId || undefined);
   }
 
   private async notify(job: Job): Promise<void> {

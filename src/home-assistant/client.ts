@@ -47,6 +47,30 @@ export class HomeAssistantClient {
     }
   }
 
+  async lastCalledMediaPlayer(): Promise<string | undefined> {
+    const res = await this.fetchFn(`${this.baseUrl}/api/states`, {
+      headers: { Authorization: `Bearer ${this.token}` },
+      signal: AbortSignal.timeout(1500),
+    });
+    if (!res.ok) {
+      throw new HomeAssistantError(`states request failed: HTTP ${res.status}`, res.status);
+    }
+
+    const states = await res.json() as Array<{
+      entity_id: string;
+      state: string;
+      last_updated: string;
+      attributes?: { last_called?: boolean };
+    }>;
+    return states
+      .filter((state) =>
+        state.entity_id.startsWith("media_player.")
+        && state.state !== "unavailable"
+        && state.attributes?.last_called === true)
+      .sort((a, b) => Date.parse(b.last_updated) - Date.parse(a.last_updated))[0]
+      ?.entity_id;
+  }
+
   async health(): Promise<boolean> {
     try {
       const res = await this.fetchFn(`${this.baseUrl}/api/`, {

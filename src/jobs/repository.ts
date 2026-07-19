@@ -8,6 +8,7 @@ export interface Job {
   alexaRequestId: string;
   alexaUserIdHash: string;
   alexaDeviceId: string;
+  targetEntityId: string | null;
   query: string;
   status: JobStatus;
   hermesRunId: string | null;
@@ -23,6 +24,7 @@ export interface CreateJobInput {
   alexaRequestId: string;
   alexaUserIdHash: string;
   alexaDeviceId: string;
+  targetEntityId?: string;
   query: string;
 }
 
@@ -33,6 +35,7 @@ interface JobRow {
   alexa_request_id: string;
   alexa_user_id_hash: string;
   alexa_device_id: string;
+  target_entity_id: string | null;
   query: string;
   status: JobStatus;
   hermes_run_id: string | null;
@@ -50,6 +53,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   alexa_request_id TEXT NOT NULL UNIQUE,
   alexa_user_id_hash TEXT NOT NULL,
   alexa_device_id TEXT NOT NULL,
+  target_entity_id TEXT,
   query TEXT NOT NULL,
   status TEXT NOT NULL,
   hermes_run_id TEXT,
@@ -68,6 +72,7 @@ function toJob(row: JobRow): Job {
     alexaRequestId: row.alexa_request_id,
     alexaUserIdHash: row.alexa_user_id_hash,
     alexaDeviceId: row.alexa_device_id,
+    targetEntityId: row.target_entity_id,
     query: row.query,
     status: row.status,
     hermesRunId: row.hermes_run_id,
@@ -91,6 +96,10 @@ export class JobRepository {
     this.db = new Database(dbPath);
     this.db.pragma("journal_mode = WAL");
     this.db.exec(CREATE_TABLE);
+    const columns = this.db.pragma("table_info(jobs)") as Array<{ name: string }>;
+    if (!columns.some((column) => column.name === "target_entity_id")) {
+      this.db.exec("ALTER TABLE jobs ADD COLUMN target_entity_id TEXT");
+    }
   }
 
   create(input: CreateJobInput): CreatedJob {
@@ -99,10 +108,19 @@ export class JobRepository {
     const result = this.db
       .prepare(
         `INSERT OR IGNORE INTO jobs
-         (id, alexa_request_id, alexa_user_id_hash, alexa_device_id, query, status, retry_count, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 'QUEUED', 0, ?, ?)`,
+         (id, alexa_request_id, alexa_user_id_hash, alexa_device_id, target_entity_id, query, status, retry_count, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'QUEUED', 0, ?, ?)`,
       )
-      .run(id, input.alexaRequestId, input.alexaUserIdHash, input.alexaDeviceId, input.query, ts, ts);
+      .run(
+        id,
+        input.alexaRequestId,
+        input.alexaUserIdHash,
+        input.alexaDeviceId,
+        input.targetEntityId ?? null,
+        input.query,
+        ts,
+        ts,
+      );
 
     const row = this.db
       .prepare("SELECT * FROM jobs WHERE alexa_request_id = ?")

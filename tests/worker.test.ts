@@ -147,6 +147,27 @@ describe("Worker", () => {
     expect(deps.ha.announce).toHaveBeenCalledWith("media_player.bedroom_echo", "今日は晴れです。");
   });
 
+  it("prefers the Home Assistant entity captured when the question was accepted", async () => {
+    const deps = makeDeps({
+      deviceRepo: { resolve: () => "media_player.stale_mapping" },
+    });
+    const worker = new Worker(deps);
+    deps.repo.create({
+      alexaRequestId: "r",
+      alexaUserIdHash: "h",
+      alexaDeviceId: "device-1",
+      targetEntityId: "media_player.requesting_echo",
+      query: "q",
+    });
+
+    await worker.processNext();
+
+    expect(deps.ha.announce).toHaveBeenCalledWith(
+      "media_player.requesting_echo",
+      "今日は晴れです。",
+    );
+  });
+
   it("falls back to the default entity for unmapped devices", async () => {
     const deps = makeDeps({ deviceRepo: { resolve: () => undefined } });
     const worker = new Worker(deps);

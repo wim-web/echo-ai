@@ -103,6 +103,41 @@ describe("Alexa handlers", () => {
     expect(job?.alexaRequestId).toBe("req-1");
   });
 
+  it("captures the last-called Home Assistant entity when accepting a question", async () => {
+    const resolveLastCalledEntity = vi.fn().mockResolvedValue("media_player.requesting_echo");
+    const deps = makeDeps({ resolveLastCalledEntity });
+    const handlers = buildHandlers(deps);
+    const { handlerInput } = makeHandlerInput(
+      intentEnvelope("AskHermesIntent", { query: "今日の天気は？" }),
+    );
+
+    await findHandler(handlers, handlerInput).handle(handlerInput as never);
+
+    expect(resolveLastCalledEntity).toHaveBeenCalledTimes(1);
+    expect(deps.repo.claimNextQueued()?.targetEntityId).toBe("media_player.requesting_echo");
+  });
+
+  it("accepts the question without a captured entity when Home Assistant lookup fails", async () => {
+    const warn = vi.fn();
+    const deps = makeDeps({
+      resolveLastCalledEntity: vi.fn().mockRejectedValue(new Error("HA unavailable")),
+      logger: { info: vi.fn(), warn },
+    });
+    const handlers = buildHandlers(deps);
+    const { handlerInput, speak } = makeHandlerInput(
+      intentEnvelope("AskHermesIntent", { query: "今日の天気は？" }),
+    );
+
+    await findHandler(handlers, handlerInput).handle(handlerInput as never);
+
+    expect(speak).toHaveBeenCalledWith("了解。終わったらこの端末で知らせます。");
+    expect(deps.repo.claimNextQueued()?.targetEntityId).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({ err: "HA unavailable" }),
+      "failed to resolve last-called Home Assistant entity",
+    );
+  });
+
   it("does not create a duplicate job for a retried request id", () => {
     const deps = makeDeps();
     const handlers = buildHandlers(deps);

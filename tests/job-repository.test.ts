@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import Database from "better-sqlite3";
 import { describe, expect, it } from "vitest";
 import { JobRepository } from "../src/jobs/repository.js";
 
@@ -18,6 +22,61 @@ describe("JobRepository", () => {
     expect(job.status).toBe("QUEUED");
     expect(job.retryCount).toBe(0);
     expect(job.createdAt).toBeTruthy();
+  });
+
+  it("stores the Home Assistant target entity captured when the job is created", () => {
+    const repo = createRepo();
+
+    const job = repo.create({
+      alexaRequestId: "req-target",
+      alexaUserIdHash: "hash-1",
+      alexaDeviceId: "device-1",
+      targetEntityId: "media_player.requesting_echo",
+      query: "質問",
+    });
+
+    expect(job.targetEntityId).toBe("media_player.requesting_echo");
+    expect(repo.findById(job.id)?.targetEntityId).toBe("media_player.requesting_echo");
+  });
+
+  it("adds the target entity column when opening an existing database", () => {
+    const directory = mkdtempSync(join(tmpdir(), "echo-ai-job-repo-"));
+    const databasePath = join(directory, "jobs.sqlite");
+    try {
+      const oldDatabase = new Database(databasePath);
+      oldDatabase.exec(`
+        CREATE TABLE jobs (
+          id TEXT PRIMARY KEY,
+          alexa_request_id TEXT NOT NULL UNIQUE,
+          alexa_user_id_hash TEXT NOT NULL,
+          alexa_device_id TEXT NOT NULL,
+          query TEXT NOT NULL,
+          status TEXT NOT NULL,
+          hermes_run_id TEXT,
+          answer TEXT,
+          error TEXT,
+          retry_count INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          notified_at TEXT
+        );
+      `);
+      oldDatabase.close();
+
+      const repo = new JobRepository(databasePath);
+      const job = repo.create({
+        alexaRequestId: "req-migrated",
+        alexaUserIdHash: "hash-1",
+        alexaDeviceId: "device-1",
+        targetEntityId: "media_player.requesting_echo",
+        query: "質問",
+      });
+
+      expect(job.targetEntityId).toBe("media_player.requesting_echo");
+      repo.close();
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it("returns the existing job when alexaRequestId already exists (idempotent)", () => {

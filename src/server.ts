@@ -59,6 +59,7 @@ function main(): void {
         repo,
         skillId: config.alexaSkillId,
         logger,
+        resolveLastCalledEntity: () => ha.lastCalledMediaPlayer(),
         onJobAccepted: () => {
           void worker.processNext();
         },
