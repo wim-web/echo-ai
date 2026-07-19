@@ -170,6 +170,26 @@ describe("Alexa handlers", () => {
     }
   });
 
+  it("handles SessionEndedRequest without error", () => {
+    const deps = makeDeps();
+    const handlers = buildHandlers(deps);
+    const envelope = {
+      ...intentEnvelope(""),
+      request: {
+        type: "SessionEndedRequest",
+        requestId: "req-end",
+        timestamp: new Date().toISOString(),
+        locale: "ja-JP",
+        reason: "EXCEEDED_MAX_REPROMPTS",
+      },
+    };
+    const { handlerInput, getResponse } = makeHandlerInput(envelope);
+
+    findHandler(handlers, handlerInput).handle(handlerInput as never);
+
+    expect(getResponse).toHaveBeenCalled();
+  });
+
   it("responds to FallbackIntent", () => {
     const deps = makeDeps();
     const handlers = buildHandlers(deps);

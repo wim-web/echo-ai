@@ -119,7 +119,26 @@ export function buildHandlers(deps: AlexaDeps): RequestHandler[] {
     },
   };
 
-  return [launchHandler, askHermesHandler, helpHandler, stopCancelHandler, fallbackHandler];
+  const sessionEndedHandler: RequestHandler = {
+    canHandle: (handlerInput) =>
+      verify(handlerInput) && getRequestType(handlerInput.requestEnvelope) === "SessionEndedRequest",
+    handle: (handlerInput) => {
+      deps.logger?.info(
+        {
+          requestId: handlerInput.requestEnvelope.request.requestId,
+          reason:
+            handlerInput.requestEnvelope.request.type === "SessionEndedRequest"
+              ? handlerInput.requestEnvelope.request.reason
+              : undefined,
+        },
+        "session ended",
+      );
+      // SessionEndedRequest には音声応答を返せないため空のレスポンスを返す
+      return handlerInput.responseBuilder.getResponse();
+    },
+  };
+
+  return [launchHandler, askHermesHandler, helpHandler, stopCancelHandler, fallbackHandler, sessionEndedHandler];
 
   function verify(handlerInput: HandlerInput): boolean {
     verifySkillId(handlerInput, deps.skillId);
