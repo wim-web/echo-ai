@@ -64,6 +64,16 @@ function main(): void {
         },
       }),
     )
+    .addResponseInterceptors((handlerInput, response) => {
+      logger.info(
+        {
+          requestId: handlerInput.requestEnvelope.request.requestId,
+          shouldEndSession: response?.shouldEndSession,
+          hasReprompt: response?.reprompt !== undefined,
+        },
+        "alexa response sent",
+      );
+    })
     .addErrorHandlers({
       canHandle: () => true,
       handle: (handlerInput, error) => {
