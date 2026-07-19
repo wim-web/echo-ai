@@ -65,7 +65,7 @@ function makeHandlerInput(envelope: unknown) {
     requestEnvelope: envelope,
     responseBuilder: { speak, withShouldEndSession, reprompt, addElicitSlotDirective, getResponse },
   };
-  return { handlerInput, speak, withShouldEndSession, addElicitSlotDirective, getResponse };
+  return { handlerInput, speak, reprompt, withShouldEndSession, addElicitSlotDirective, getResponse };
 }
 
 function makeDeps(overrides: Partial<AlexaDeps> = {}): AlexaDeps {
@@ -175,22 +175,20 @@ describe("Alexa handlers", () => {
   it("responds to LaunchRequest with usage guidance", () => {
     const deps = makeDeps();
     const handlers = buildHandlers(deps);
-    const { handlerInput, speak, withShouldEndSession, addElicitSlotDirective } = makeHandlerInput(launchEnvelope());
+    const {
+      handlerInput,
+      speak,
+      reprompt,
+      withShouldEndSession,
+      addElicitSlotDirective,
+    } = makeHandlerInput(launchEnvelope());
 
     findHandler(handlers, handlerInput).handle(handlerInput as never);
 
     expect(speak).toHaveBeenCalledWith(expect.stringContaining("ヘルメス"));
+    expect(reprompt).toHaveBeenCalledWith(expect.stringContaining("ヘルメス"));
     expect(withShouldEndSession).toHaveBeenCalledWith(false);
-    expect(addElicitSlotDirective).toHaveBeenCalledWith("query", {
-      name: "AskHermesIntent",
-      confirmationStatus: "NONE",
-      slots: {
-        query: {
-          name: "query",
-          confirmationStatus: "NONE",
-        },
-      },
-    });
+    expect(addElicitSlotDirective).not.toHaveBeenCalled();
   });
 
   it("responds to HelpIntent", () => {

@@ -42,16 +42,7 @@ export function buildHandlers(deps: AlexaDeps): RequestHandler[] {
     handle: (handlerInput) =>
       handlerInput.responseBuilder
         .speak(SPEECH.launch)
-        .addElicitSlotDirective("query", {
-          name: INTENTS.askHermes,
-          confirmationStatus: "NONE",
-          slots: {
-            query: {
-              name: "query",
-              confirmationStatus: "NONE",
-            },
-          },
-        })
+        .reprompt(SPEECH.launch)
         .withShouldEndSession(false)
         .getResponse(),
   };
